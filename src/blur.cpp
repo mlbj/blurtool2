@@ -1,5 +1,5 @@
-#include "blur.h"
-#include "image.h"
+#include "blur.hpp"
+#include "image.hpp"
 #include <iostream>
 #include <algorithm>
 

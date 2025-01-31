@@ -1,7 +1,7 @@
 #ifndef BLUR_H
 #define BLUR_H
 
-#include "image.h"
+#include "image.hpp"
 
 // this is our main Blur definition
 struct Blur{
