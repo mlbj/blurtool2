@@ -6,6 +6,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+enable_testing()
+
 # add the test executable
 add_executable(test_image test_image.cpp)
 
@@ -18,4 +20,5 @@ message(STATUS "Registering tests with gtest_discover_tests()")
 gtest_discover_tests(test_image)
 
 # add test explicitely otherwise
-add_test(NAME test_image COMMAND test_image)
+add_test(test_image "test_image")
+
