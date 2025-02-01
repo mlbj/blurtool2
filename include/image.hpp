@@ -85,19 +85,12 @@ private:
   
 		// extract shape (assuming a 2d float32 array)
 		bool little_endianness;
-		parse_npy_header(header, little_endianness);	
+		size_t num_bytes;
+		parse_npy_header(header, little_endianness, num_bytes);	
 
 		// read binary data
         data.resize(nrows*ncols);
-        file.read(reinterpret_cast<char*>(data.data()), data.size()*sizeof(float));
-
-		std::cout << data[0] << std::endl;
-		std::cout << data[1] << std::endl;
-		std::cout << data[2] << std::endl;
-		std::cout << data[3] << std::endl;
-		std::cout << data[4] << std::endl;
-		std::cout << data[5] << std::endl;
-
+        file.read(reinterpret_cast<char*>(data.data()), data.size()*num_bytes);
 
 		if (little_endianness && !is_system_little_endian()){
 			swap_endianness(data);  
@@ -105,9 +98,11 @@ private:
 	}
 
 	void parse_npy_header(const std::string& header,
-						  bool& little_endianness){
+						  bool& little_endianness,
+						  size_t& num_bytes){
 		// Example header: "{ 'descr': '<f4', 'fortran_order': False, 'shape': (128, 256), }"
 
+		// decode shape 
 		// we sum 10 here in order to get the position of the first digit of the shape
 		std::size_t shape_pos = header.find("'shape': (") + 10;
 		if (shape_pos == std::string::npos){
@@ -117,13 +112,27 @@ private:
 		char ignore;
 		shape_stream >> nrows >> ignore >> ncols;
 
-        little_endianness = (header.find("<i8") != std::string::npos);
+		// decode data type 
+		std::size_t descr_pos = header.find("'descr': '") + 10;
+		if (descr_pos == std::string::npos){
+			throw std::runtime_error("Invalid .npy header format. Could not find data type.");
+		}
+		std::string descr = header.substr(descr_pos, 3);
+		if (descr == "<f4"){
+			num_bytes = 4;
+        	little_endianness = true;
+		}else if (descr == "<f8"){
+			num_bytes = 8;
+        	little_endianness = true;
+		}else{
+			throw std::runtime_error("Invalid .npy header format. Unsupported data type.");
+		}
 
 	}
 
     static std::string make_npy_header(int rows, int cols) {
         std::ostringstream header;
-        header << "{'descr': '<i8', 'fortran_order': False, 'shape': (" << rows << ", " << cols << "), }";
+        header << "{'descr': '<f4', 'fortran_order': False, 'shape': (" << rows << ", " << cols << "), }";
         
 		// Assuming 10 bytes for header metadata. 
 		// We will then pad until the header is 64 bytes aligned 
