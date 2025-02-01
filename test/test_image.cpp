@@ -29,17 +29,26 @@ TEST(ImageTest, Accessor){
     EXPECT_FLOAT_EQ(image(2, 2), 3.0f);
 }
 
-// // Test the constructor from a file (load from .npz)
-// TEST(ImageTest, LoadFromFile) {
-//     // Assuming you have a file test_image.npz with the shape (2, 2)
-//     Image img = Image::load_from_file("test_image.npz");
+// test the constructor from a .npy file
+TEST(ImageTest, NpyConstructor){
+    // assuming we have a file test_image_2x3.npy with the shape (2, 3)
+    Image image = Image("test_image_2x3.npy");
 
-//     // Test that the data is correctly loaded
-//     EXPECT_EQ(img.nrows, 2);
-//     EXPECT_EQ(img.ncols, 2);
-//     EXPECT_EQ(img(0, 0), 1.0f); // Expect value in (0, 0) to be 1.0
-//     EXPECT_EQ(img(1, 1), 2.0f); // Expect value in (1, 1) to be 2.0
-// }
+
+    // Test that the data is correctly loaded
+    EXPECT_EQ(image.nrows, 2);
+    EXPECT_EQ(image.ncols, 3);
+
+
+
+    EXPECT_EQ(image(0, 0), 11.0f);  
+    EXPECT_EQ(image(0, 1), 12.0f); 
+    EXPECT_EQ(image(0, 2), 13.0f); 
+    EXPECT_EQ(image(1, 0), 21.0f); 
+    EXPECT_EQ(image(1, 1), 22.0f); 
+    EXPECT_EQ(image(1, 2), 23.0f); 
+
+}
 
 int main(int argc, char **argv){
     ::testing::InitGoogleTest(&argc, argv);

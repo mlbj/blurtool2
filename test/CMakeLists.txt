@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.22)
+
 # Download GoogleTest
 include(FetchContent)
 FetchContent_Declare(
@@ -7,6 +9,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
+
+# copy test data to the build directory
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_image_2x3.npy ${CMAKE_CURRENT_BINARY_DIR}/test_image_2x3.npy COPYONLY)
 
 # add the test executable
 add_executable(test_image test_image.cpp)
