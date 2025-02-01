@@ -14,11 +14,8 @@ add_executable(test_image test_image.cpp)
 # link google test 
 target_link_libraries(test_image PRIVATE gtest_main blur_lib)
 
-# register tests
+# discover and register tests
 include(GoogleTest)
 message(STATUS "Registering tests with gtest_discover_tests()")
 gtest_discover_tests(test_image)
-
-# add test explicitely otherwise
-add_test(test_image "test_image")
 
