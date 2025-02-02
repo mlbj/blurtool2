@@ -1,6 +1,4 @@
 # blurtool2 
 
-This is ....
-
-
+This library offers a quick way to perform nonstationary blur operations. 
 

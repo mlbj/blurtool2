@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 add_library(blur_lib 
     image.cpp
     blur.cpp
+    main.cpp
 )
 
 # includes

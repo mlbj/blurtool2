@@ -1,5 +1,5 @@
-#ifndef IMAGE_H
-#define IMAGE_H
+#ifndef IMAGE_HPP
+#define IMAGE_HPP
 
 #include <vector>
 #include <fstream>
@@ -9,20 +9,49 @@
 #include <iostream>
 
 
+// device enum
+enum Device{
+	CPU = 0,
+	GPU = 1
+};
+
 // this is our main Image definition 
 class Image{
 public:
 	int ncols, nrows;
 	std::vector<float> data;
+	float* d_data = nullptr;
+	Device device;
 
-	// zero constructor 
-	Image(int h, int w): nrows(h),
-						 ncols(w),
-			     		 data(h*w, 0.0f){}
+	// // zero constructor 
+	// Image(int h, int w, Device device = CPU): 
+	// 	nrows(h),
+	// 	ncols(w),
+	// 	data(h*w, 0.0f),
+	// 	device(device){
+	// 		// to GPU logic if needed
+
+	// }
+
+	// Allocate memory only constructor
+	Image(int h, int w, Device device = CPU): 
+		nrows(h),
+		ncols(w),
+		device(device){
+
+		if (device == CPU){
+			data.resize(h*w);
+		}//else{
+	//		cudaMalloc(&d_data, h*w*sizeof(float));
+//		}
+	}
 
 	// load from .npy constructor
-	Image(const std::string& filename){
-		load_npy(filename);
+	Image(const std::string& filename): 
+		d_data(nullptr){
+
+		load_npy(filename); 
+		device = CPU;
 	}
 
 
