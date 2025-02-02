@@ -82,15 +82,29 @@ private:
 		// read header
 		std::string header(header_len, ' ');
 		file.read(header.data(), header_len);
-  
-		// extract shape (assuming a 2d float32 array)
+
+		// extract shape (assuming a 2d float array)
 		bool little_endianness;
 		size_t num_bytes;
 		parse_npy_header(header, little_endianness, num_bytes);	
 
-		// read binary data
-        data.resize(nrows*ncols);
-        file.read(reinterpret_cast<char*>(data.data()), data.size()*num_bytes);
+		// make room for nrows*ncols floats
+		data.resize(nrows*ncols);
+
+		// read data
+		if (num_bytes==4){
+			// read binary data directly into data
+			file.read(reinterpret_cast<char*>(data.data()), data.size()*sizeof(float));
+		}else{
+			// read binary data in a temporary double buffer
+			std::vector<double> temp_data(nrows*ncols);
+			file.read(reinterpret_cast<char*>(temp_data.data()), temp_data.size()*sizeof(double));
+
+			// convert to float
+			for (size_t i=0; i<data.size(); i++){
+				data[i] = static_cast<float>(temp_data[i]);
+			}
+		}
 
 		if (little_endianness && !is_system_little_endian()){
 			swap_endianness(data);  
@@ -101,7 +115,7 @@ private:
 						  bool& little_endianness,
 						  size_t& num_bytes){
 		// Example header: "{ 'descr': '<f4', 'fortran_order': False, 'shape': (128, 256), }"
-
+		
 		// decode shape 
 		// we sum 10 here in order to get the position of the first digit of the shape
 		std::size_t shape_pos = header.find("'shape': (") + 10;
@@ -117,11 +131,11 @@ private:
 		if (descr_pos == std::string::npos){
 			throw std::runtime_error("Invalid .npy header format. Could not find data type.");
 		}
-		std::string descr = header.substr(descr_pos, 3);
+		std::string descr = header.substr(descr_pos, 3); 
 		if (descr == "<f4"){
 			num_bytes = 4;
         	little_endianness = true;
-		}else if (descr == "<f8"){
+		}else if (descr == "<f8"){ 
 			num_bytes = 8;
         	little_endianness = true;
 		}else{

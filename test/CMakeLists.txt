@@ -11,7 +11,9 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 # copy test data to the build directory
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_image_2x3.npy ${CMAKE_CURRENT_BINARY_DIR}/test_image_2x3.npy COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_image_2x3_f4.npy ${CMAKE_CURRENT_BINARY_DIR}/test_image_2x3_f4.npy COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_image_2x3_f8.npy ${CMAKE_CURRENT_BINARY_DIR}/test_image_2x3_f8.npy COPYONLY)
+
 
 # add the test executable
 add_executable(test_image test_image.cpp)
