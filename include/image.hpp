@@ -173,21 +173,38 @@ private:
 
 	}
 
-    static std::string make_npy_header(int rows, int cols) {
-        std::ostringstream header;
-        header << "{'descr': '<f4', 'fortran_order': False, 'shape': (" << rows << ", " << cols << "), }";
-        
-		// Assuming 10 bytes for header metadata. 
-		// We will then pad until the header is 64 bytes aligned 
-		while ((header.str().size() + 10) % 64 != 0) header << " ";  
+	static std::string make_npy_header(int rows, int cols){
+    	std::ostringstream header;
+    	header << "{'descr': '<f4', 'fortran_order': False, 'shape': (" << rows << ", " << cols << "), }";
 
-        std::string result = "\x93NUMPY\x01\x00";
-        uint16_t header_len = static_cast<uint16_t>(header.str().size());
-        result.append(reinterpret_cast<const char*>(&header_len), 2);
-        result.append(header.str());
+    	// padding to align to 64 bytes
+    	while ((header.str().size() + 10) % 64 != 0){
+			header << " ";  
+		}
 
-        return result;
-    }
+		// create result string as a vector of chars
+    	std::vector<char> result;
+    
+    	// numpy magic string
+		// we will exclude null terminator of C-string because
+		// it was causing some trouble 
+    	const char magic[] = "\x93NUMPY\x01\x00"; 
+    	result.insert(result.end(), std::begin(magic), std::end(magic) - 1);  
+
+		// get header len 
+		uint16_t header_len = static_cast<uint16_t>(header.str().size());
+    
+    	// append the header length in little-endian format
+    	result.push_back(static_cast<char>(header_len & 0xFF));        // Low byte
+    	result.push_back(static_cast<char>((header_len >> 8) & 0xFF)); // High byte
+    
+    	// append the actual header
+	    std::string header_str = header.str();
+	    result.insert(result.end(), header_str.begin(), header_str.end());
+
+		// convert vector to string
+    	return std::string(result.begin(), result.end());  
+	}	
 
     // check if system is little-endian
     static bool is_system_little_endian() {

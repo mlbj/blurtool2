@@ -19,7 +19,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_image_2x3_f8.npy ${CMAKE_CURRENT
 add_executable(test_image test_image.cpp)
 
 # link google test 
-target_link_libraries(test_image PRIVATE gtest_main blur_lib)
+target_link_libraries(test_image PRIVATE gtest_main blurtool2)
 
 # discover and register tests
 include(GoogleTest)

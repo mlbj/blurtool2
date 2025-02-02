@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 
-# source files
-add_library(blur_lib 
+# source files for library
+add_library(blurtool2 
     image.cpp
     blur.cpp
-    main.cpp
 )
 
 # includes
-target_include_directories(blur_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
-
+target_include_directories(blurtool2 PUBLIC ${CMAKE_SOURCE_DIR}/include)
