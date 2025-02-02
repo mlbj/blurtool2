@@ -13,4 +13,6 @@ add_subdirectory(test)
 enable_testing()
 
 
-
+include_directories(include)
+# target_link_libraries(blur_example PRIVATE blurtool2)
+add_executable(blur_example main.cpp)
