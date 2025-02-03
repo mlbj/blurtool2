@@ -51,7 +51,6 @@ public:
 struct GaussianBlur : public StationaryBlur{
 public:
 	float sigma_row, sigma_col;
-	int center_row, center_col;
 
 	// constructor
 	explicit GaussianBlur(float sigma_row,
@@ -66,19 +65,45 @@ public:
 		
 
 		// compute the center of the PSF
-		center_row = nrows/2;
-		center_col = ncols/2;
+		float center_row = 0.0;
+		float center_col = 0.0;
 
 		// allocate memory for the PSF, if needed
 		if (cache_psf){
+			// allocate the psf data
 			psf = new Image(nrows, ncols, device);
+			double sum = 0.0f;
 
-			for (int i=0; i<nrows; i++){
-				for (int j=0; j<ncols; j++){
-					(*psf)(i, j) = GAUSSIAN(i, j, 
-										    center_row, center_col, 
-										    sigma_row, sigma_col); // exp(-0.5*(pow((i-center_row)/sigma_row, 2) + pow((j-center_col)/sigma_col, 2)));
+			// CPU device
+			if (device == CPU){
+				// create psf
+				for (int i=0; i<nrows; i++){
+					float x = -1.0 + 2.0*i/(nrows-1);
+					for (int j=0; j<ncols; j++){
+						float y = -1.0 + 2.0*j/(ncols-1);
+						(*psf)(i, j) = GAUSSIAN(x, y, 
+											    center_row, center_col, 
+											    sigma_row, sigma_col); // exp(-0.5*(pow((i-center_row)/sigma_row, 2) + pow((j-center_col)/sigma_col, 2)));
+
+						// accumulate 
+						sum += (*psf)(i, j);
+					}
 				}
+
+				// normalize area
+				for (int i=0; i<nrows; i++){
+					for (int j=0; j<ncols; j++){
+						(*psf)(i,j) /= sum;
+					}
+				}
+
+
+			// GPU device
+			}else if(device == GPU){
+				// non implemented 
+				// 
+			}else{
+				throw std::runtime_error("Invalid device.");
 			}
 		}
 
@@ -97,6 +122,10 @@ public:
 			throw std::runtime_error("Output image and input image are not on the same device.");
 		}
 
+		// check shapes
+
+		int center_row = nrows/2;
+		int center_col = ncols/2;
 
 		// cached psf case
 		if (cache_psf){
