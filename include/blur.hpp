@@ -4,6 +4,11 @@
 #include <cmath>
 #include "image.hpp" 
 
+constexpr double PI = 3.14159265358979323846;
+#define GAUSSIAN(i, j, center_row, center_col, sigma_row, sigma_col) \
+    (1.0/ (2.0*PI*sigma_row*sigma_col)) * \
+	(std::exp(-0.5 * (std::pow(((i) - (center_row)) / (sigma_row), 2) + \
+    std::pow(((j) - (center_col)) / (sigma_col), 2))))
 
 // Abstract blur definition
 struct Blur{
@@ -14,7 +19,7 @@ public:
 		device(device){}
 
 	// forward method
-	virtual void forward(Image& input, Image& output) = 0;
+	virtual void forward(Image& output, Image& input) = 0;
 
 	// destructor 
 	virtual ~Blur() = default;
@@ -28,9 +33,9 @@ public:
 	bool cache_psf;
 
 	StationaryBlur(int nrows, 
-						int ncols, 
-						Device device, 
-						bool cache_psf = true):
+				   int ncols, 
+				   Device device, 
+				   bool cache_psf = true):
 		Blur(device),
 		nrows(nrows),
 		ncols(ncols),
@@ -70,7 +75,9 @@ public:
 
 			for (int i=0; i<nrows; i++){
 				for (int j=0; j<ncols; j++){
-					(*psf)(i, j) = exp(-0.5*(pow((i-center_row)/sigma_row, 2) + pow((j-center_col)/sigma_col, 2)));
+					(*psf)(i, j) = GAUSSIAN(i, j, 
+										    center_row, center_col, 
+										    sigma_row, sigma_col); // exp(-0.5*(pow((i-center_row)/sigma_row, 2) + pow((j-center_col)/sigma_col, 2)));
 				}
 			}
 		}
@@ -79,7 +86,7 @@ public:
 	}
 
 	// forward method
-	void forward(Image& input, Image& output) override{
+	void forward(Image& output, Image& input) override{
 		// check if the input image is on the same device as the PSF
 		if (input.device != device){
 			throw std::runtime_error("Input image and PSF are not on the same device.");
