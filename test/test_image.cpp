@@ -64,6 +64,7 @@ TEST(ImageTest, NpyConstructor8){
     EXPECT_EQ(image(1, 2), 23.0f); 
 }
 
+
 int main(int argc, char **argv){
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

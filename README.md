@@ -5,6 +5,7 @@ This library offers a quick way to perform nonstationary blur operations.
 
 
 ### todo 
-
- - test save npy 
- - rotate psf with bilinear interpolation
+  - 
+  - device implementation of stationary convolution using cuda. 
+  - test save npy 
+  - rotate psf with bilinear interpolation
