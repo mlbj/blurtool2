@@ -1,19 +1,17 @@
 #ifndef IMAGE_HPP
 #define IMAGE_HPP
 
-#include <vector>
-#include <fstream>
-#include <sstream>
+#include <cuda_runtime.h>
+#include <stdexcept>
 #include <string>
-#include <algorithm>
 #include <iostream>
 
 
-// device enum
-enum Device{
-	CPU = 0,
-	GPU = 1
-};
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+
 
 // this is our main Image definition 
 class Image{
@@ -21,29 +19,14 @@ public:
 	int ncols, nrows;
 	std::vector<float> data;
 	float* d_data = nullptr;
-	Device device;
-
-	// // zero constructor 
-	// Image(int h, int w, Device device = CPU): 
-	// 	nrows(h),
-	// 	ncols(w),
-	// 	data(h*w, 0.0f),
-	// 	device(device){
-	// 		// to GPU logic if needed
-
-	// }
 
 	// Allocate memory only constructor
 	Image(int h, int w, Device device = CPU): 
 		nrows(h),
 		ncols(w),
 		device(device){
-
-		if (device == CPU){
-			data.resize(h*w);
-		}//else{
-	//		cudaMalloc(&d_data, h*w*sizeof(float));
-//		}
+		cudaMalloc(&d_data, h*w*sizeof(float));
+		cudaMemset(d_data, 0, h*w*sizeof(float));
 	}
 
 	// load from .npy constructor
@@ -51,26 +34,50 @@ public:
 		d_data(nullptr){
 
 		load_npy(filename); 
-		device = CPU;
+		device = GPU;
 	}
 
 
-	// accessor
-	float& operator()(int x, int y){
-		return data[x*ncols + y];
-	}
-	const float& operator()(int x, int y) const{
-		return data[x*ncols + y];
-	}
-	float& at(int x, int y){
-		return data[x*ncols + y];
-	}
-	const float& at(int x, int y) const{
-		return data[x*ncols + y];
-	}
+	// // accessor in CPU
+	// float& operator()(int x, int y){
+	// 	if (device==GPU){
+	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
+	// 	}else{
+	// 		return data[x*ncols + y];
+	// 	}
+	// }
+	// const float& operator()(int x, int y) const{
+	// 	if (device==GPU){
+	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
+	// 	}else{
+	// 		return data[x*ncols + y];
+	// 	}
+	// }
+	// float& at(int x, int y){
+	// 	if (device==GPU){
+	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute");
+	// 	}else{
+	// 		return data[x*ncols + y];
+	// 	}
+	// }
+	// const float& at(int x, int y) const{
+	// 	if (device==GPU){
+	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
+	// 	}else{
+	// 		return data[x*ncols + y];
+	// 	}
+	// }
+
+	// accessor-like device functions for the GPU case
+	__device__ float gpu_at(int x, int y);
+	__device__ void set_gpu_value(int x, int y, float value);
 
 	// save as .npy
 	void save_npy(const std::string& filename) const{
+		// save device data to host 
+		std::vector<float> h_data(nrows*ncols);
+		cudaMemcpy(h_data.data(), d_data, nrows*ncols*sizeof(float), cudaMemcpyDeviceToHost);
+		
 		std::ofstream file(filename, std::ios::binary);
 
 		if (!file){
@@ -82,8 +89,14 @@ public:
 		file.write(header.data(), header.size());
 		
 		// write data
-		file.write(reinterpret_cast<const char*>(data.data()), 
-				   data.size()*sizeof(float));
+		file.write(reinterpret_cast<const char*>(h_data.data()), 
+				   h_data.size()*sizeof(float));
+	}
+
+	~Image(){
+		if (d_data){
+			cudaFree(d_data);
+		}
 	}
 
 
@@ -117,28 +130,35 @@ private:
 		size_t num_bytes;
 		parse_npy_header(header, little_endianness, num_bytes);	
 
+		// allocate host data
+		std::vector<float h_data(nrows*ncols);
+
 		// make room for nrows*ncols floats
 		data.resize(nrows*ncols);
 
-		// read data
+		// read host data
 		if (num_bytes==4){
 			// read binary data directly into data
-			file.read(reinterpret_cast<char*>(data.data()), data.size()*sizeof(float));
+			file.read(reinterpret_cast<char*>(h_data.data()), h_data.size()*sizeof(float));
 		}else{
 			// read binary data in a temporary double buffer
-			std::vector<double> temp_data(nrows*ncols);
-			file.read(reinterpret_cast<char*>(temp_data.data()), temp_data.size()*sizeof(double));
+			std::vector<double> temp_h_data(nrows*ncols);
+			file.read(reinterpret_cast<char*>(temp_h_data.data()), temp_h_data.size()*sizeof(double));
 
 			// convert to float
-			for (size_t i=0; i<data.size(); i++){
-				data[i] = static_cast<float>(temp_data[i]);
+			for (size_t i=0; i<h_data.size(); i++){
+				h_data[i] = static_cast<float>(temp_h_data[i]);
 			}
 		}
 
-		if (little_endianness && !is_system_little_endian()){
-			swap_endianness(data);  
-		}
+		// move data to GPU
+		cudaMalloc(&d_data, nrows*ncols*sizeof(float));
+		cudaMemcpy(d_data, h_data.data(), nrows*ncols*sizeof(float), cudaMemcpyHostToDevice);
 	}
+
+
+// this
+
 
 	void parse_npy_header(const std::string& header,
 						  bool& little_endianness,

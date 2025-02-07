@@ -1,18 +1,53 @@
-cmake_minimum_required(VERSION 3.18)
-project(blurtool2)
-
-set(CMAKE_CXX_STANDARD 17)
 cmake_minimum_required(VERSION 3.22)
 
+# Enable languages C++ and CUDA
+project(blurtool2 LANGUAGES CXX CUDA)
 
-# add subdirectories
-add_subdirectory(src) 
-add_subdirectory(test)
+# Set C++ and CUDA standards
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 17)
 
-# enable testing
-enable_testing()
+# Enable CUDA separable compilation mode
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
-
+# Include directories
 include_directories(include)
-# target_link_libraries(blur_example PRIVATE blurtool2)
+
+# Create the executable
 add_executable(blur_example main.cpp)
+
+# Define the library
+add_library(blurtool2 
+    src/image.cu      # Make sure this is a CUDA file
+    src/blur.cpp       # Regular C++ source file
+)
+
+# Set CUDA separable compilation for the library
+set_target_properties(blurtool2 PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+# Link directories and libraries
+target_include_directories(blurtool2 PUBLIC ${CMAKE_SOURCE_DIR}/include ${CUDA_INCLUDE_DIRS})
+target_link_libraries(blurtool2 PRIVATE ${CUDA_LIBRARIES})
+
+# Test setup
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+)
+FetchContent_MakeAvailable(googletest)
+
+# Copy test data to the build directory
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test_image_2x3_f4.npy ${CMAKE_CURRENT_BINARY_DIR}/test_image_2x3_f4.npy COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test_image_2x3_f8.npy ${CMAKE_CURRENT_BINARY_DIR}/test_image_2x3_f8.npy COPYONLY)
+
+# Add the test executable
+add_executable(test_image test/test_image.cpp)
+
+# Link GoogleTest and blurtool2
+target_link_libraries(test_image PRIVATE gtest_main blurtool2)
+
+# Register the tests
+include(GoogleTest)
+gtest_discover_tests(test_image)
+
