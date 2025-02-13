@@ -44,8 +44,8 @@ __global__ void normalize(cufftComplex* d_data,
 						  int nrows,
 						  int ncols,
 						  float d_sum){
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    int j = blockIdx.y*blockDim.y + threadIdx.y;
 
     if (i<nrows && j<ncols && d_sum>0) {
     	// Normalize to [0,1]	
