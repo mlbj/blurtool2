@@ -1,11 +1,14 @@
 # blurtool2 
 
-This library offers a quick way to perform nonstationary blur operations. 
+This library offers a quick way to perform nonstationary blur operations for high-performance image processing on CUDA capable GPUS. The code levarages CUFFT library for fast FFT implementation on GPUs. 
 
 
+### Dependencies
+
+- Cuda Toolkit
+- CUFFT Library
 
 ### todo 
-  - 
-  - device implementation of stationary convolution using cuda. 
-  - test save npy 
-  - rotate psf with bilinear interpolation
+   
+  - Test save npy 
+  - Rotate psf with bilinear interpolation

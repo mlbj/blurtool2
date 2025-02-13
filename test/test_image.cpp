@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "image.hpp" 
+#include <iostream>
 
 // test for the zero constructor
 TEST(ImageTest, ZeroConstructor){
@@ -10,8 +11,10 @@ TEST(ImageTest, ZeroConstructor){
     EXPECT_EQ(image.ncols, 3);
 
     // check if first and last elements are zero
-    EXPECT_FLOAT_EQ(image(0, 0), 0.0f);
-    EXPECT_FLOAT_EQ(image(2, 2), 0.0f);
+    EXPECT_FLOAT_EQ(image(0, 0).x, 0.0f);
+    EXPECT_FLOAT_EQ(image(0, 0).y, 0.0f);
+    EXPECT_FLOAT_EQ(image(2, 2).x, 0.0f);
+    EXPECT_FLOAT_EQ(image(2, 2).y, 0.0f);
 }
 
 // test for the accessor
@@ -19,14 +22,14 @@ TEST(ImageTest, Accessor){
     Image image(3, 3);
     
     // set some values
-    image(0, 0) = 1.0f;
-    image(1, 1) = 2.0f;
-    image(2, 2) = 3.0f;
+    image(0, 0).x = 1.0f;
+    image(1, 1).x = 2.0f;
+    image(2, 2).x = 3.0f;
 
     // check if values are correct
-    EXPECT_FLOAT_EQ(image(0, 0), 1.0f);
-    EXPECT_FLOAT_EQ(image(1, 1), 2.0f);
-    EXPECT_FLOAT_EQ(image(2, 2), 3.0f);
+    EXPECT_FLOAT_EQ(image(0, 0).x, 1.0f);
+    EXPECT_FLOAT_EQ(image(1, 1).x, 2.0f);
+    EXPECT_FLOAT_EQ(image(2, 2).x, 3.0f);
 }
 
 // test the constructor from a .npy file with 4 byte floats
@@ -37,13 +40,13 @@ TEST(ImageTest, NpyConstructor4){
     // Test that the data is correctly loaded
     EXPECT_EQ(image.nrows, 2);
     EXPECT_EQ(image.ncols, 3);
-
-    EXPECT_EQ(image(0, 0), 11.0f);  
-    EXPECT_EQ(image(0, 1), 12.0f); 
-    EXPECT_EQ(image(0, 2), 13.0f); 
-    EXPECT_EQ(image(1, 0), 21.0f); 
-    EXPECT_EQ(image(1, 1), 22.0f); 
-    EXPECT_EQ(image(1, 2), 23.0f); 
+    
+    EXPECT_EQ(image(0, 0).x, 11.0f);  
+    EXPECT_EQ(image(0, 1).x, 12.0f); 
+    EXPECT_EQ(image(0, 2).x, 13.0f); 
+    EXPECT_EQ(image(1, 0).x, 21.0f); 
+    EXPECT_EQ(image(1, 1).x, 22.0f); 
+    EXPECT_EQ(image(1, 2).x, 23.0f); 
 }
 
 
@@ -56,12 +59,12 @@ TEST(ImageTest, NpyConstructor8){
     EXPECT_EQ(image.nrows, 2);
     EXPECT_EQ(image.ncols, 3);
 
-    EXPECT_EQ(image(0, 0), 11.0f);  
-    EXPECT_EQ(image(0, 1), 12.0f); 
-    EXPECT_EQ(image(0, 2), 13.0f); 
-    EXPECT_EQ(image(1, 0), 21.0f); 
-    EXPECT_EQ(image(1, 1), 22.0f); 
-    EXPECT_EQ(image(1, 2), 23.0f); 
+    EXPECT_EQ(image(0, 0).x, 11.0f);  
+    EXPECT_EQ(image(0, 1).x, 12.0f); 
+    EXPECT_EQ(image(0, 2).x, 13.0f); 
+    EXPECT_EQ(image(1, 0).x, 21.0f); 
+    EXPECT_EQ(image(1, 1).x, 22.0f); 
+    EXPECT_EQ(image(1, 2).x, 23.0f); 
 }
 
 

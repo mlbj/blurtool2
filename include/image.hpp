@@ -2,6 +2,7 @@
 #define IMAGE_HPP
 
 #include <cuda_runtime.h>
+#include <cufft.h>
 #include <stdexcept>
 #include <string>
 #include <iostream>
@@ -11,75 +12,118 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-
+ 
+enum Device{
+	CPU=0,
+	GPU=1,
+};
 
 // this is our main Image definition 
 class Image{
 public:
 	int ncols, nrows;
-	std::vector<float> data;
-	float* d_data = nullptr;
+	Device device; 
+	cufftComplex* d_data = nullptr;
+	cufftComplex* h_data = nullptr; 
 
 	// Allocate memory only constructor
 	Image(int h, int w, Device device = CPU): 
-		nrows(h),
-		ncols(w),
-		device(device){
-		cudaMalloc(&d_data, h*w*sizeof(float));
-		cudaMemset(d_data, 0, h*w*sizeof(float));
+		nrows(h), ncols(w), device(device){
+		
+		if (device==GPU){
+			cudaMalloc(&d_data, h*w*sizeof(cufftComplex));
+			cudaMemset(d_data, 0, h*w*sizeof(cufftComplex));
+		}else{
+			h_data = new cufftComplex[nrows*ncols]();
+		}
 	}
 
 	// load from .npy constructor
-	Image(const std::string& filename): 
-		d_data(nullptr){
-
+	Image(const std::string& filename, Device device = CPU){
+		// load npy from file. If already allocated, this will overwrite host data
 		load_npy(filename); 
-		device = GPU;
+
+		// transfer host data to GPU, if necessary 
+		if (device == GPU){
+			to_gpu();
+			
+			// free host data
+			free_h_data();
+		}
 	}
+        
 
-
-	// // accessor in CPU
-	// float& operator()(int x, int y){
-	// 	if (device==GPU){
-	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
-	// 	}else{
-	// 		return data[x*ncols + y];
-	// 	}
-	// }
-	// const float& operator()(int x, int y) const{
-	// 	if (device==GPU){
-	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
-	// 	}else{
-	// 		return data[x*ncols + y];
-	// 	}
-	// }
-	// float& at(int x, int y){
-	// 	if (device==GPU){
-	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute");
-	// 	}else{
-	// 		return data[x*ncols + y];
-	// 	}
-	// }
-	// const float& at(int x, int y) const{
-	// 	if (device==GPU){
-	// 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
-	// 	}else{
-	// 		return data[x*ncols + y];
-	// 	}
-	// }
+	// accessor in CPU
+	cufftComplex& operator()(int x, int y){
+	 	if (device==GPU){
+	 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
+	 	}else{
+	 		return h_data[x*ncols + y];
+	 	}
+	 }
+	 const cufftComplex& operator()(int x, int y) const{
+	 	if (device==GPU){
+	 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
+	 	}else{
+	 		return h_data[x*ncols + y];
+	 	}
+	 }
+	 cufftComplex& at(int x, int y){
+	 	if (device==GPU){
+	 		throw std::runtime_error("Cannot return GPU reference. Check device attribute");
+	 	}else{
+	 		return h_data[x*ncols + y];
+	 	}
+	 }
+	 const cufftComplex& at(int x, int y) const{
+	 	if (device==GPU){
+	 		throw std::runtime_error("Cannot return GPU reference. Check device attribute.");
+	 	}else{
+	 		return h_data[x*ncols + y];
+	 	}
+	 }
+	
 
 	// accessor-like device functions for the GPU case
-	__device__ float gpu_at(int x, int y);
-	__device__ void set_gpu_value(int x, int y, float value);
+	__device__ cufftComplex gpu_at(int x, int y);
+	__device__ void set_gpu_value(int x, int y, cufftComplex value);
+	
+	
+	// automatic transfer functions between GPU and CPU
+	void to_gpu(){
+		if (h_data){
+			if (!d_data){
+				cudaMalloc(&d_data, nrows*ncols*sizeof(cufftComplex));
+			}
+			cudaMemcpy(d_data, h_data, nrows*ncols*sizeof(cufftComplex), cudaMemcpyHostToDevice);
+			
+			// set device flag	
+			device = GPU;
+		}else{
+			// throw warning
+		}
+	}
+	void to_cpu(){
+		if (d_data){
+			if (!h_data){
+				h_data = new cufftComplex[nrows*ncols];
+			}
+			cudaMemcpy(h_data, d_data, nrows*ncols*sizeof(cufftComplex), cudaMemcpyDeviceToHost);
+			
+			// set device flag
+			device = CPU;	
+		}else{
+			// throw warning
+		}
+	}
 
 	// save as .npy
-	void save_npy(const std::string& filename) const{
-		// save device data to host 
-		std::vector<float> h_data(nrows*ncols);
-		cudaMemcpy(h_data.data(), d_data, nrows*ncols*sizeof(float), cudaMemcpyDeviceToHost);
+	void save_npy(const std::string& filename){
+		if (device == GPU){
+			to_cpu();
+		}
 		
 		std::ofstream file(filename, std::ios::binary);
-
 		if (!file){
 			throw std::runtime_error("Could not open file " + filename);
 		}
@@ -87,20 +131,48 @@ public:
 		// write .npy header
 		const std::string header = make_npy_header(nrows, ncols);
 		file.write(header.data(), header.size());
-		
+		 
+		// for now, we are saving only the real part
+		// first we create a float array to store the real parts
+		float* h_data_real = new float[nrows*ncols];
+
+		// extract the real parts
+		for (int i=0; i<nrows; i++){
+			for (int j=0; j<ncols; j++){
+				h_data_real[i*ncols + j] = h_data[i*ncols + j].x;
+			}
+		}
+
 		// write data
-		file.write(reinterpret_cast<const char*>(h_data.data()), 
-				   h_data.size()*sizeof(float));
+		file.write(reinterpret_cast<const char*>(h_data_real), nrows*ncols*sizeof(float));
+
+		// clean up
+		delete[] h_data_real;
+
 	}
 
 	~Image(){
-		if (d_data){
-			cudaFree(d_data);
-		}
+		free_h_data();
+		free_d_data();
 	}
 
 
 private: 
+	void free_h_data(){
+		if (h_data){
+			delete[] h_data;
+			h_data = nullptr;
+		}
+	}
+	
+	void free_d_data(){
+		if (d_data){
+			cudaFree(d_data);
+			d_data = nullptr;
+		}
+	}
+
+
 	void load_npy(const std::string& filename){ 
 		std::ifstream file(filename, std::ios::binary);
 		if (!file){
@@ -125,35 +197,43 @@ private:
 		std::string header(header_len, ' ');
 		file.read(header.data(), header_len);
 
-		// extract shape (assuming a 2d float array)
+		// extract shape (assuming a 2d cufftComplex array)
 		bool little_endianness;
 		size_t num_bytes;
 		parse_npy_header(header, little_endianness, num_bytes);	
 
-		// allocate host data
-		std::vector<float h_data(nrows*ncols);
+		// Allocate host memory if necessary
+		if (!h_data) {
+		    h_data = new cufftComplex[nrows*ncols];
+		}
 
-		// make room for nrows*ncols floats
-		data.resize(nrows*ncols);
 
 		// read host data
 		if (num_bytes==4){
-			// read binary data directly into data
-			file.read(reinterpret_cast<char*>(h_data.data()), h_data.size()*sizeof(float));
-		}else{
-			// read binary data in a temporary double buffer
-			std::vector<double> temp_h_data(nrows*ncols);
-			file.read(reinterpret_cast<char*>(temp_h_data.data()), temp_h_data.size()*sizeof(double));
+			// assuming float precision
+			std::vector<float> h_data_float(nrows*ncols);
 
-			// convert to float
-			for (size_t i=0; i<h_data.size(); i++){
-				h_data[i] = static_cast<float>(temp_h_data[i]);
+			// read binary data directly into data
+			file.read(reinterpret_cast<char*>(h_data_float.data()), nrows*ncols*sizeof(float));
+			
+			// convert to cufftComplex
+			for (int i=0; i<nrows*ncols; i++){
+				h_data[i].x = h_data_float[i];
+				h_data[i].y = 0.0f;
+			}
+ 
+ 		}else if (num_bytes==8){
+			// assuming double precision 
+			// read binary data in a temporary double buffer
+			std::vector<double> h_data_double(nrows*ncols);
+			file.read(reinterpret_cast<char*>(h_data_double.data()), nrows*ncols*sizeof(double));
+
+			// convert to cufftComplex
+			for (size_t i=0; i<nrows*ncols; i++){
+				h_data[i].x = (float) h_data_double[i];
+				h_data[i].y = (float) 0.0f;
 			}
 		}
-
-		// move data to GPU
-		cudaMalloc(&d_data, nrows*ncols*sizeof(float));
-		cudaMemcpy(d_data, h_data.data(), nrows*ncols*sizeof(float), cudaMemcpyHostToDevice);
 	}
 
 
@@ -232,13 +312,14 @@ private:
         return reinterpret_cast<uint8_t*>(&num)[0] == 1;
     }
 
-    // swap endianness of float vector
-    static void swap_endianness(std::vector<float>& vec) {
-        for (float& value : vec) {
+    // swap endianness of cufftComplex vector
+    static void swap_endianness(std::vector<cufftComplex>& vec) {
+        for (cufftComplex& value : vec) {
             char* bytes = reinterpret_cast<char*>(&value);
-            std::reverse(bytes, bytes + sizeof(float));
+            std::reverse(bytes, bytes + sizeof(cufftComplex));
         }
     }
 };
 
 #endif
+
