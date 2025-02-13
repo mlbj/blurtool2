@@ -321,5 +321,11 @@ private:
     }
 };
 
+
+
+// some misc kernels
+__global__ void multiply(cufftComplex* d_output, cufftComplex* d_input1, cufftComplex* d_input2, int nrows, int ncols);
+ 
+
 #endif
 

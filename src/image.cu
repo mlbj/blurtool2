@@ -26,8 +26,8 @@ __global__ void multiply(cufftComplex* d_output, cufftComplex* d_input1, cufftCo
     int j = blockIdx.y*blockDim.y + threadIdx.y;
 
     if (i<nrows && j<ncols) {
-        d_output[i*ncols + j].x = d_input1.x*d_input2.x - d_input1.y*d_input2.y;
-        d_output[i*ncols + j].y = d_input1.x*d_input2.y + d_input1.y*d_input2.x;
+        d_output[i*ncols + j].x = d_input1[i*ncols + j].x*d_input2[i*ncols + j].x - d_input1[i*ncols + j].y*d_input2[i*ncols + j].y;
+        d_output[i*ncols + j].y = d_input1[i*ncols + j].x*d_input2[i*ncols + j].y + d_input1[i*ncols + j].y*d_input2[i*ncols + j].x;
     }
 }
 

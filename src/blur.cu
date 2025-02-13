@@ -138,7 +138,7 @@ void GaussianBlur::forward(Image& output, Image& input){
 										   nrows,
 										   ncols,
 										   *d_sum);
-	   cudaDeviceSynchronize();
+		cudaDeviceSynchronize();
 	   
 	   // free d_sum
 	   cudaFree(d_sum);
@@ -155,12 +155,16 @@ void GaussianBlur::forward(Image& output, Image& input){
 	}
 
 	// multiply 
-	
+	multiply<<<gridSize, blockSize>>>(output.d_data, 
+									  output.d_data,
+									  d_data_psf_swap,
+									  nrows,
+									  ncols);
 
 	// compute ifft of the product 
-
-
-
+	if (cufftExecC2C(plan, output.d_data, output.d_data, CUFFT_INVERSE) != CUFFT_SUCCESS){
+		throw std::runtime_error("CUFFT inverse transform failed.");
+	}
 }
 
 
